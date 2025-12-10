@@ -1,0 +1,59 @@
+<html>
+  <body>
+    <pre class="mermaid">
+graph TD
+    %% Styles
+    classDef auth fill:#ffecd1,stroke:#ff9f1c,stroke-width:2px;
+    classDef core fill:#d0f4de,stroke:#2b9348,stroke-width:2px;
+    classDef action fill:#e2eafc,stroke:#3f37c9,stroke-width:2px;
+    classDef external fill:#f0f0f0,stroke:#333,stroke-dasharray: 5 5;
+
+    %% Entry Point
+    Start((App Launch)) --> Splash[Splash Screen]
+
+    %% Authentication Flow
+    Splash --> AuthCheck{User Logged In?}
+    AuthCheck -- No --> Login[Login Screen]
+    AuthCheck -- No --> SignUp[Sign Up Screen]
+    
+    Login --> Dashboard
+    SignUp --> HandleSetup[<b>Payment Handle Setup</b><br/>Mandatory: Enter Venmo/CashApp]
+    HandleSetup --> Dashboard
+
+    %% Dashboard (Main Hub)
+    AuthCheck -- Yes --> Dashboard[<b>Dashboard / Home</b><br/>List of Bills Owed & Bills Due]
+
+    %% Flow A: Adding a Subscription (The Owner)
+    Dashboard -->|Tap '+' Btn| AddSub[<b>Add Subscription</b><br/>Input: Service Name, Cost, Date]
+    AddSub --> SelectPayer[<b>Select Payer</b><br/>Input: Friend's Email]
+    SelectPayer --> ConfirmAdd{Confirm?}
+    ConfirmAdd -- Yes --> Dashboard
+    ConfirmAdd -- No --> AddSub
+
+    %% Flow B: Paying a Bill (The Splitter)
+    Dashboard -->|Tap a Bill| BillDetail[<b>Bill Detail View</b><br/>See Amount & Due Date]
+    BillDetail -->|Tap 'Pay Now'| DeepLinkLogic{Which App?}
+    
+    DeepLinkLogic -- Venmo --> OpenVenmo[Open Venmo App]
+    DeepLinkLogic -- CashApp --> OpenCash[Open Cash App]
+    DeepLinkLogic -- PayPal --> OpenPayPal[Open PayPal Web]
+    
+    OpenVenmo & OpenCash & OpenPayPal -->|User Returns| MarkPaid[<b>Mark as Paid</b><br/>User confirms payment sent]
+    MarkPaid --> Dashboard
+
+    %% Flow C: Settings
+    Dashboard -->|Profile Icon| Settings[<b>Settings / Profile</b><br/>Edit Handles, Sign Out]
+
+    %% Class Assignments
+    class Splash,Login,SignUp,HandleSetup auth;
+    class Dashboard,BillDetail,AddSub,SelectPayer,Settings core;
+    class DeepLinkLogic,MarkPaid action;
+    class OpenVenmo,OpenCash,OpenPayPal external;
+    </pre>
+
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({ startOnLoad: true });
+    </script>
+  </body>
+</html>
