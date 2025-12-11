@@ -1,33 +1,68 @@
 import cv2
 import mediapipe as mp
+import time
 
-mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(min_detection_confidence=0.7, min_tracking_confidence=0.7)
-mp_drawing = mp.solutions.drawing_utils
+BaseOptions = mp.tasks.BaseOptions
+GestureRecognizer = mp.tasks.vision.GestureRecognizer
+GestureRecognizerOptions = mp.tasks.vision.GestureRecognizerOptions
+VisionRunningMode = mp.tasks.vision.RunningMode
 
-cap = cv2.VideoCapture(1)
+# Path to the exported model
+model_path = 'exported_model/gesture_recognizer.task'
 
-while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
-        break
+# Initialize the Gesture Recognizer
+options = GestureRecognizerOptions(
+    base_options=BaseOptions(model_asset_path=model_path),
+    running_mode=VisionRunningMode.VIDEO
+)
 
-    # Convert BGR to RGB for MediaPipe
-    image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+def main():
+    with GestureRecognizer.create_from_options(options) as recognizer:
+        cap = cv2.VideoCapture(0) # Use 0 for default camera
+        
+        if not cap.isOpened():
+            print("Error: Could not open webcam.")
+            return
 
-    # Process the image with MediaPipe Hands
-    results = hands.process(image_rgb)
+        start_time = time.time()
 
-    # Draw hand landmarks
-    if results.multi_hand_landmarks:
-        for hand_landmarks in results.multi_hand_landmarks:
-            mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret:
+                print("Ignoring empty camera frame.")
+                continue
 
-    # Display the frame
-    cv2.imshow('MediaPipe Hand Tracking', frame)
+            # Convert the image from BGR to RGB
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)
 
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+            # Calculate timestamp in milliseconds
+            timestamp_ms = int((time.time() - start_time) * 1000)
 
-cap.release()
-cv2.destroyAllWindows()
+            # Recognize gestures
+            result = recognizer.recognize_for_video(mp_image, timestamp_ms)
+
+            # Display the result
+            if result.gestures:
+                for gesture in result.gestures:
+                    # Top gesture
+                    if gesture:
+                        category_name = gesture[0].category_name
+                        score = gesture[0].score
+                        text = f"Gesture: {category_name} ({score:.2f})"
+                        
+                        # Draw text on frame
+                        cv2.putText(frame, text, (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 
+                                    1, (0, 255, 0), 2, cv2.LINE_AA)
+                        print(text) # Print to console as well
+
+            cv2.imshow('MediaPipe Gesture Recognition', frame)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+
+        cap.release()
+        cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
